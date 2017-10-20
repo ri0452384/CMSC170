@@ -4,9 +4,14 @@ from tkinter import messagebox
 
 maze=[]
 originalmazetext=""
-
+closed_list=[]
+open_list=[]
 
 class Node():
+    parent = None
+    x=0
+    y=0
+    f=0
     def __init__(self,ex,why,eff,gee,haych):
         self.x = ex
         self.y = why
@@ -51,23 +56,85 @@ def calculate_direct_heuristic(x1,y1):
 def get_char_at(x,y):
     return maze[y][x]
 
+def get_node(node,position, character,g_value):
+    if (character != '%'):
+        x1,y1 = node.x, node.y
+        value=0
+        if position == 'l':
+            x1 -= 1
+        elif position == 'r':
+            x1 += 1
+        elif position == 'a':
+            y1 -= 1
+        elif position == 'b':
+            y1 += 1
+        else:
+            print("direction not found")
+        h = calculate_manhattan_heuristic(x1, y1)
+        g_value += 1
+        # f = g+h
+        ans = Node(x1, y1, g_value + h, g_value, h)
+        ans.parent = node
+        return ans
+    else:
+        print("unpassable %s found!"%character)
+        return None
+#returns the node if the node was added, none otherwise
+def check_open_list(node):
+    global open_list
+    for open_node in open_list:
+        if node ==None:
+            return None
+        elif(node.x == open_node.x and node.y == open_node.y and node.g < open_node.g):
+            print(node, open_node)
+            open_list.append(node)
+            open_list.remove(open_node)
+            open_list = sorted(open_list,key=lambda x: x.f)
+            return node
+        else:
+            open_list.append(node)
+            open_list = sorted(open_list, key=lambda x: x.f)
+            return node
 
 #solves the maze via manhattan distance as the heuristic values
 def solve_manhattan():
-    openlist=[Node]
-    closedlist=[Node]
+    global closed_list
+    global open_list
+    open_list = [Node]
+    closed_list=[Node]
     parent=[Node]
-
     x,y = get_start()
+    g=0
     heuristic = calculate_manhattan_heuristic(x,y)
     #starting Node is made the current because this will be added to the closed list
+    current = Node(x, y, heuristic, g, heuristic)
     #f=g+h, but g is 0, therefore f=h.
-    current = Node(x,y,heuristic,0,heuristic)
-    closedlist.append(current)
-    print(current.x)
-    print(current.y)
-    print(get_char_at(current.x,current.y))
-    print(closedlist)
+    end_loop = False
+    i=0
+    while i < 5:
+        open_list.append(current)
+        closed_list.append(current)
+        #get char to the left
+        left = get_char_at(current.x-1,current.y)
+        temp = get_node(current,'l',left,g)
+        check_open_list(temp)
+        #get char to the right
+        right = get_char_at(current.x+1, current.y)
+        temp = get_node(current, 'r', right, g)
+        check_open_list(temp)
+        #get char above
+        above = get_char_at(current.x, current.y-1)
+        temp = get_node(current, 'a', above, g)
+        check_open_list(temp)
+        #get char below
+        below = get_char_at(current.x, current.y+1)
+        temp = get_node(current, 'b', below, g)
+        check_open_list(temp)
+        print(current.x)
+        print(current.y)
+        print(closed_list)
+        print(open_list)
+
 
 def openfile():
     global originalmazetext
