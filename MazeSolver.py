@@ -9,22 +9,25 @@ open_list=[]
 
 class Node():
     parent = None
+    f=0
     x=0
     y=0
-    f=0
     def __init__(self,ex,why,eff,gee,haych):
-        self.x = ex
-        self.y = why
-        self.f = eff
-        self.g = gee
-        self.h = haych
+        self.x = int(ex)
+        self.y = int(why)
+        self.f = int(eff)
+        self.g = int(gee)
+        self.h = int(haych)
+    def __copy__(self):
+        copy = Node(self.x,self.y,self.f,self.g,self.h)
+        copy.parent = self.parent
+        return copy
 
     def __str__(self):
         return "<x:%s y:%s f:%s g:%s h:%s>" % (self.x, self.y, self.f,self.g, self.h)
 
     def __repr__(self):
         return "<x:%s y:%s f:%s g:%s h:%s>" % (self.x, self.y, self.f,self.g, self.h)
-
 
 #returns coordinates(x,y) of the starting position
 def get_start():
@@ -45,6 +48,7 @@ def get_goal():
 #returns the manhattan distance from current point to goal
 def calculate_manhattan_heuristic(x1,y1):
     x2,y2 = get_goal()
+    print("goal: ",x2,y2)
     return abs(x2-x1)+abs(y2-y1)
 
 #returns the direct distance as defined by MP
@@ -55,10 +59,16 @@ def calculate_direct_heuristic(x1,y1):
 #scans through the maze and returns what char is occupying tile x,y
 def get_char_at(x,y):
     return maze[y][x]
+#writes a character to a specified coordinate on the maze file
+def set_char_at(x,y,character):
+    maze[y][x] = character
 
-def get_node(node,position, character,g_value):
+def get_node(position, character,g_value):
+    global open_list
+    global current
     if (character != '%'):
-        x1,y1 = node.x, node.y
+        x1 = current.x
+        y1 = current.y
         value=0
         if position == 'l':
             x1 -= 1
@@ -71,70 +81,91 @@ def get_node(node,position, character,g_value):
         else:
             print("direction not found")
         h = calculate_manhattan_heuristic(x1, y1)
-        g_value += 1
+        g_value = current.g + 1
         # f = g+h
         ans = Node(x1, y1, g_value + h, g_value, h)
-        ans.parent = node
+        ans.x=x1
+        ans.y=y1
+        ans.parent = current.__copy__()
+        print("node: %s, parent: %s"%(ans,current))
         return ans
     else:
         print("unpassable %s found!"%character)
         return None
-#returns the node if the node was added, none otherwise
-def check_open_list(node):
-    global open_list
-    for open_node in open_list:
-        if node ==None:
-            return None
-        elif(node.x == open_node.x and node.y == open_node.y and node.g < open_node.g):
-            print(node, open_node)
-            open_list.append(node)
-            open_list.remove(open_node)
-            open_list = sorted(open_list,key=lambda x: x.f)
-            return node
+"""helper method that checks whether the node is on the open list or not
+    returns True if found, False otherwise
+"""
+def in_the_open_list(node):
+    for element in open_list:
+        if node.x == element.x and node.y == element.y:
+            #if node has lower g cost, place this in the open list instead
+            if node.g < element.g:
+                open_list.append(node)
+                open_list.remove(element)
+            return True
+
         else:
-            open_list.append(node)
-            open_list = sorted(open_list, key=lambda x: x.f)
-            return node
+            return False
 
 #solves the maze via manhattan distance as the heuristic values
 def solve_manhattan():
     global closed_list
     global open_list
+    global current
     open_list = [Node]
     closed_list=[Node]
-    parent=[Node]
-    x,y = get_start()
+    x0,y0 = get_start()   #WE WILL KEEP TRACK OF X AND Y
     g=0
-    heuristic = calculate_manhattan_heuristic(x,y)
+    heuristic = calculate_manhattan_heuristic(x0,y0)
     #starting Node is made the current because this will be added to the closed list
-    current = Node(x, y, heuristic, g, heuristic)
-    #f=g+h, but g is 0, therefore f=h.
-    end_loop = False
-    i=0
-    while i < 5:
-        open_list.append(current)
-        closed_list.append(current)
-        #get char to the left
-        left = get_char_at(current.x-1,current.y)
-        temp = get_node(current,'l',left,g)
-        check_open_list(temp)
-        #get char to the right
-        right = get_char_at(current.x+1, current.y)
-        temp = get_node(current, 'r', right, g)
-        check_open_list(temp)
-        #get char above
-        above = get_char_at(current.x, current.y-1)
-        temp = get_node(current, 'a', above, g)
-        check_open_list(temp)
-        #get char below
-        below = get_char_at(current.x, current.y+1)
-        temp = get_node(current, 'b', below, g)
-        check_open_list(temp)
+    current = Node(x0, y0, heuristic, g, heuristic)
+    #f=g+h, but g is 0, therefore f=h
+    while True:
         print(current.x)
         print(current.y)
-        print(closed_list)
-        print(open_list)
+        open_list.append(current)
+        closed_list.append(current)
+        if current.h == 0:
+            print("goal found!",current,get_goal())
+            break
+        open_list.remove(current)
+        #get char to the left
+        left = get_char_at(current.x-1,current.y)
+        temp = get_node('l',left,g)
+        if temp != None and not in_the_open_list(temp):
+            open_list.append(temp)
+        #get char to the right
+        right = get_char_at(current.x+1, current.y)
+        temp = get_node('r', right, g)
+        if temp != None and not in_the_open_list(temp):
+            open_list.append(temp)
+        #get char above
+        above = get_char_at(current.x, current.y-1)
+        temp = get_node('a', above, g)
+        if temp != None and not in_the_open_list(temp):
+            open_list.append(temp)
+        #get char below
+        below = get_char_at(current.x, current.y+1)
+        temp = get_node('b', below, g)
+        if temp != None and not in_the_open_list(temp):
+            open_list.append(temp)
+        open_list = sorted(open_list, key=lambda x:x.f,reverse=False)
+        current = open_list.pop(1)
+    #traceback the parent of every current Node until we get back to the starting tile
+    parent = []
+    while(current.x !=x0 or current.y != y0):
+        parent.append(current)
+        set_char_at(current.x,current.y,'x')
+        current = current.parent
+    print(parent)
+    draw_maze()
 
+def draw_maze():
+    mazeoutput=""
+    for line in maze:
+        for character in line:
+            mazeoutput+=character
+    origlabel.config(text=mazeoutput)
 
 def openfile():
     global originalmazetext
@@ -145,16 +176,10 @@ def openfile():
     with open(filename) as file:
         content = file.readlines()
     for line in content:
-        #line = line.replace("\n", "")
-        #line = line.replace("\r", "")
         row = list(line)
         maze.append(row)
     print(maze)
-    mazeoutput=""
-    for line in maze:
-        for character in line:
-            mazeoutput+=character
-    origlabel.config(text=mazeoutput)
+    draw_maze()
 
 def showhelp():
     messagebox.showinfo('help file goes here')
@@ -169,17 +194,19 @@ mainframe.pack()
 textwidth=450
 backgroundcolor='#2B2B2B'
 fgcolor="#A9B7C6"
-
-#labels here
-origlabel = Label(mainframe,text="maze")
-origlabel.configure(font=("Consolas", 12))
-origlabel.pack()
-
+#buttons here
 manhattanbutton = Button(mainframe,text="manhattan distance",command=solve_manhattan)
 manhattanbutton.pack()
 """directbutton = Button(mainframe,text="direct distance",command=solve_direct)
     directbutton.pack()
 """
+#labels here
+origlabel = Label(mainframe,text="maze")
+origlabel.configure(font=("Consolas", 12))
+origlabel.pack()
+
+
+
 #   main menu here
 
 menu = Menu(root, tearoff=False)
