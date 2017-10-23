@@ -6,6 +6,7 @@ maze=[]
 originalmazetext=""
 closed_list=[]
 open_list=[]
+goals=[]    #array of Nodes but without F,G, and H values
 
 class Node():
     parent = None
@@ -18,6 +19,7 @@ class Node():
         self.f = int(eff)
         self.g = int(gee)
         self.h = int(haych)
+
     def __copy__(self):
         copy = Node(self.x,self.y,self.f,self.g,self.h)
         copy.parent = self.parent
@@ -37,28 +39,40 @@ def get_start():
             if maze[i][j] == "P":
                 return j, i
 
-#returns coordinates(x,y) of the goal
-def get_goal():
-    x, y = len(maze), len(maze[0])
-    for i in range(0, y):
-        for j in range(0, x):
+#todo: return multiple goals returns coordinates(x,y) of the goal
+def get_goals():
+    global goals
+    print("fix my logic!")
+    y, x = len(maze), len(maze[0])
+    for i in range(0, y-1):
+        for j in range(0, x-1):
             if maze[i][j] == ".":
-                return j, i
+                temp=Node(j,i,0,0,0)
+                temp.y=i
+                temp.x=j
+                goals.insert(0,temp)
+
+def get_current_goal():
+    print(goals)
+    if len(goals) > 0:
+        return goals[0]
 
 #returns the manhattan distance from current point to goal
 def calculate_manhattan_heuristic(x1,y1):
-    x2,y2 = get_goal()
+    temp = get_current_goal()
+    x2,y2 = temp.x, temp.y
     print("goal: ",x2,y2)
     return abs(x2-x1)+abs(y2-y1)
 
 #returns the direct distance as defined by MP
 def calculate_direct_heuristic(x1,y1):
-    x2,y2 = get_goal()
+    x2,y2 = get_current_goal().x,get_current_goal().y
     return max(abs(x2-x1),abs(y2-y1))
 
 #scans through the maze and returns what char is occupying tile x,y
 def get_char_at(x,y):
     return maze[y][x]
+
 #writes a character to a specified coordinate on the maze file
 def set_char_at(x,y,character):
     maze[y][x] = character
@@ -66,6 +80,7 @@ def set_char_at(x,y,character):
 def get_node(position, character,g_value):
     global open_list
     global current
+    global goals
     if (character != '%'):
         x1 = current.x
         y1 = current.y
@@ -95,6 +110,7 @@ def get_node(position, character,g_value):
 """helper method that checks whether the node is on the open list or not
     returns True if found, False otherwise
 """
+
 def in_the_open_list(node):
     for element in open_list:
         if node.x == element.x and node.y == element.y:
@@ -103,7 +119,6 @@ def in_the_open_list(node):
                 open_list.append(node)
                 open_list.remove(element)
             return True
-
         else:
             return False
 
@@ -121,13 +136,16 @@ def solve_manhattan():
     current = Node(x0, y0, heuristic, g, heuristic)
     #f=g+h, but g is 0, therefore f=h
     while True:
-        print(current.x)
-        print(current.y)
         open_list.append(current)
         closed_list.append(current)
-        if current.h == 0:
-            print("goal found!",current,get_goal())
-            break
+        if current.x == goals[0].x and current.y == goals[0].y:
+            if len(goals) > 0:
+                print("goal found!", get_current_goal())
+                goals.pop(0)
+            if len(goals)==0:
+                print("all goals found!",current,get_current_goal())
+                break
+
         open_list.remove(current)
         #get char to the left
         left = get_char_at(current.x-1,current.y)
@@ -159,14 +177,14 @@ def solve_manhattan():
         current = current.parent
     print(parent)
     draw_maze()
-
+#draws the maze on the screen based on the maze 2d array
 def draw_maze():
     mazeoutput=""
     for line in maze:
         for character in line:
             mazeoutput+=character
     origlabel.config(text=mazeoutput)
-
+#opens the maze file
 def openfile():
     global originalmazetext
     global maze
@@ -178,9 +196,9 @@ def openfile():
     for line in content:
         row = list(line)
         maze.append(row)
-    print(maze)
+    get_goals()
     draw_maze()
-
+#help not defined.
 def showhelp():
     messagebox.showinfo('help file goes here')
 root = Tk()
@@ -200,6 +218,7 @@ manhattanbutton.pack()
 """directbutton = Button(mainframe,text="direct distance",command=solve_direct)
     directbutton.pack()
 """
+###
 #labels here
 origlabel = Label(mainframe,text="maze")
 origlabel.configure(font=("Consolas", 12))
