@@ -18,10 +18,10 @@ class Node():
         return copy
 
     def __str__(self):
-        return "(%s, %s)" % (self.x, self.y)
+        return "%s, %s" % (self.x, self.y)
 
     def __repr__(self):
-        return "(%s, %s)" % (self.x, self.y)
+        return "%s, %s" % (self.x, self.y)
 
 
 class Group():
@@ -52,7 +52,7 @@ def openfile():
     global points
     filename = filedialog.askopenfilename( filetypes = ( ("Text file", "kmdata1.txt"),("All files", "*.*")))
     with open(filename) as file:
-        for i in range(0,300):
+        for i in range(1,300):
             one_line = file.readline().split(" ")
             x = float(one_line[1])
             y = float(one_line[2])
@@ -63,6 +63,7 @@ def openfile():
 
 def classify(points,centroids):
     global k
+    global classes
     for i in range(k):
         g = [Node]
         classes.append(g)
@@ -78,29 +79,27 @@ def classify(points,centroids):
     return classes
 
 def k_means(points,centroids,max_iteration):
+    global classes
     current_j = 0
     previous_j = 0
     for iteration in range(max_iteration):
         print(iteration)
         #classify all points according to closest centroid
         classes = classify(points,centroids)
-
         #update centroids:
-        for i in range(3):
+        for i in range(0,3):
             sum_x = 0.0
             sum_y = 0.0
             average_x = 0.0
             average_y = 0.0
-            count = 0
             for point in classes[i]:
                 sum_x += point.x
                 sum_y += point.y
-                count += 1.0
-            average_x = sum_x/count
-            average_y = sum_y/count
+            print(len(classes[i])-1)
+            average_x = sum_x/(len(classes[i])-1)
+            average_y = sum_y/(len(classes[i])-1)
             centroids[i].x = average_x
             centroids[i].y = average_y
-            print(centroids[i])
         #computing for J:
         total=0.0
         count = 0.0
@@ -108,23 +107,24 @@ def k_means(points,centroids,max_iteration):
             total += p.distance
             count += 1.0
         current_j = total / count
-        difference_j = previous_j - current_j
+        difference_j = current_j - previous_j
         previous_j = current_j
         #write current centroid assignments to _ca file:
-        with open('iter'+iteration.__str__()+'_ca.txt',"w+") as file:
+        with open('iter'+(iteration+1).__str__()+'_ca.txt',"w+") as file:
             to_write = ''
             for p in points:
                 to_write += p.centroid_id.__str__()+"\n"
             file.write(to_write)
             file.close()
-        with open('iter'+iteration.__str__()+'_cm.txt',"w+") as file:
+        with open('iter'+(iteration+1).__str__()+'_cm.txt',"w+") as file:
             to_write = ''
             for c in centroids:
                 to_write += c.__str__()+"\n"
-            to_write += current_j.__str__() + "\n"
-            to_write += difference_j.__str__() + "\n"
+            to_write += "J = "+current_j.__str__() + "\n"
+            to_write += "dJ = "+difference_j.__str__() + "\n"
             file.write(to_write)
             file.close()
+        classes.clear()
 
 def solve():
     iterations = 10
@@ -133,7 +133,7 @@ def solve():
 
 #help file
 def showhelp():
-    messagebox.showinfo('Open a file using File> Open...\n click calculate button.')
+    messagebox.showinfo(title='K-Means Help',message='(1) Open a file using File> Open...\n (2) Click calculate button.')
 
 root = Tk()
 root.minsize(width=325,height=100)
