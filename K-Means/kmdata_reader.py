@@ -124,7 +124,6 @@ def k_means(points,centroids,max_iteration):
             to_write += "dJ = "+difference_j.__str__() + "\n"
             file.write(to_write)
             file.close()
-        classes.clear()
 
 def solve():
     iterations = 10
