@@ -2,109 +2,77 @@ from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
 import math
-
-class Node():
-    x = 0.0
-    y = 0.0
-    centroid_id = -1
-    distance = 0.0;
-    def __init__(self,ex,why):
-        self.x = ex
-        self.y = why
-        self.distance = 0.0;
-
-    def __copy__(self):
-        copy = Node(self.x,self.y,self.distance)
-        return copy
-
-    def __str__(self):
-        return "%s, %s" % (self.x, self.y)
-
-    def __repr__(self):
-        return "%s, %s" % (self.x, self.y)
-
-
-class Group():
-    members = [Node]
-    head = Node(0.0,0.0)
-
-    def __copy__(self):
-        copy = Group(self.members,self.head)
-        return copy
-
-    def __str__(self):
-        return "<centroid:%s, %s>" % (self.head.__str__(),self.members.__str__())
-
-    def __repr__(self):
-        return "<centroid:%s, %s>" % (self.head.__str__(),self.members.__str__())
-
-points = [Node]
-k=3
-classes = []
-filename=None
-means = []   #means of clusters
-
-
-#open function
-def openfile():
-    global content
-    global filename
-    global points
-    filename = filedialog.askopenfilename( filetypes = ( ("Text file", "kmdata1.txt"),("All files", "*.*")))
-    with open(filename) as file:
-        for i in range(1,300):
-            one_line = file.readline().split(" ")
-            x = float(one_line[1])
-            y = float(one_line[2])
-            node = Node(x,y)
-            points.append(node)
-        file.close()
+import matplotlib.pyplot as plt
 
 
 def classify(points,centroids):
-    global k
-    global classes
-    for i in range(k):
-        g = [Node]
-        classes.append(g)
+    ans=[]
     for p in points:
         distances = []
         for c in centroids:
-            distance = math.sqrt((p.x - c.x)**2.0+(p.y - c.y)**2.0)
+            distance = math.sqrt((p[0] - c[0])**2.0+(p[1] - c[1])**2.0)
             distances.append(distance)
         classification = distances.index(min(distances))
-        p.centroid_id = classification
-        p.distance = min(distances)
-        classes[classification].append(p)
-    return classes
+        """assign centroid and distance"""
+        q = p,classification,min(distances)
+        ans.append(q)
+    return ans
+
 
 def k_means(points,centroids,max_iteration):
-    global classes
-    current_j = 0
-    previous_j = 0
+    new_image_values = []
+
+    current_j = 0.0
+    previous_j = 0.0
     for iteration in range(max_iteration):
-        print(iteration)
-        #classify all points according to closest centroid
+        """ assign each point to a cluster
+            each element of the classes array is: [0][0]original x, [0][1] original y, [1] centroid_id, [2] distance
+        """
         classes = classify(points,centroids)
-        #update centroids:
+        """plot the centroids and points for each cluster"""
+        centroid_color = ['r','m','b']
+        point_color = ['g','c','y']
+        for i in range(0,k):
+            """plot centroid for each group"""
+            plt.scatter(centroids[i][0],centroids[i][1],10,centroid_color[i])
+            """plot the points that belong to the same group"""
+            eks = []
+            why = []
+            for point in classes:
+                if point[1] == i:
+                    eks.append(point[0][0])
+                    why.append(point[0][1])
+            plt.scatter(eks,why,1,point_color[i])
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('Iteration: %s'%(iteration+1))
+        #plt.show()
+        plt.savefig('Iteration%s'%(iteration+1))
+        plt.close()
+        new_image_values.clear()
+        for new_p in classes:
+            n_x = centroids[new_p[1]][0]
+            n_y = centroids[new_p[1]][1]
+            np = n_x,n_y
+            new_image_values.append(np)
+        """ update centroids:"""
         for i in range(0,3):
             sum_x = 0.0
             sum_y = 0.0
             average_x = 0.0
             average_y = 0.0
-            for point in classes[i]:
-                sum_x += point.x
-                sum_y += point.y
-            print(len(classes[i])-1)
-            average_x = sum_x/(len(classes[i])-1)
-            average_y = sum_y/(len(classes[i])-1)
-            centroids[i].x = average_x
-            centroids[i].y = average_y
+            count = 0.0
+            for point in classes:
+                if point[1] == i:
+                    sum_x += point[0][0]
+                    sum_y += point[0][1]
+                    count +=1
+            centroids[i] = (float(sum_x/count),float(sum_y/count))
         #computing for J:
         total=0.0
         count = 0.0
-        for p in points:
-            total += p.distance
+        for point in classes:
+            total += point[2]
             count += 1.0
         current_j = total / count
         difference_j = current_j - previous_j
@@ -112,65 +80,43 @@ def k_means(points,centroids,max_iteration):
         #write current centroid assignments to _ca file:
         with open('iter'+(iteration+1).__str__()+'_ca.txt',"w+") as file:
             to_write = ''
-            for p in points:
-                to_write += p.centroid_id.__str__()+"\n"
+            for p in classes:
+                to_write += p[1].__str__()+"\n"
             file.write(to_write)
             file.close()
         with open('iter'+(iteration+1).__str__()+'_cm.txt',"w+") as file:
             to_write = ''
             for c in centroids:
-                to_write += c.__str__()+"\n"
+                to_write += c[0].__str__()
+                to_write += ", "+c[1].__str__()+"\n"
             to_write += "J = "+current_j.__str__() + "\n"
             to_write += "dJ = "+difference_j.__str__() + "\n"
             file.write(to_write)
             file.close()
+        print(new_image_values)
+        classes.clear()
+    return new_image_values
+
 
 def solve():
+    global points
     iterations = 10
-    initial_centroids = Node(3.0, 3.0), Node(6.0, 2.0), Node(8.0, 5.0)
+    initial_centroids = list()
+    initial_centroids.append((3.0, 3.0))
+    initial_centroids.append((6.0, 2.0))
+    initial_centroids.append((8.0, 5.0))
     k_means(points,initial_centroids,iterations)
 
-#help file
-def showhelp():
-    messagebox.showinfo(title='K-Means Help',message='(1) Open a file using File> Open...\n (2) Click calculate button.')
-
-root = Tk()
-root.minsize(width=325,height=100)
-#left frame here
-mainframe = Frame(root,bg='#2B2B2B')
-mainframe.pack()
-
-textwidth=450
-backgroundcolor='#2B2B2B'
-fgcolor="#A9B7C6"
-
-###
-#labels here
-solve_button = Button(mainframe,text="Calculate K-Means for 10 iterations",command=solve)
-solve_button.pack()
-
-
-
-#   main menu here
-
-menu = Menu(root, tearoff=False)
-root.title("K-Means calculator")
-root.config(menu=menu)
-
-#submenu code goes here
-filemenu = Menu(menu, tearoff=False)
-menu.add_cascade(label="File", menu=filemenu)
-filemenu.add_command(label="Open...", command=openfile)
-
-filemenu.add_command(label="Help",command=showhelp)
-filemenu.add_separator()
-filemenu.add_command(label="Exit", command=root.quit)
-
-#bottombar code here
-bottombar = Frame(root,bg="white")
-bottombar.pack(side=BOTTOM, fill=X)
-
-
-root.mainloop()
-
-root.mainloop()
+points = []
+k=3
+classes = []
+filename ='kmdata1.txt'
+with open(filename) as file:
+    for i in range(0,300):
+        one_line = file.readline().split(" ")
+        x = float(one_line[1])
+        y = float(one_line[2])
+        node = (x,y)
+        points.append(node)
+    file.close()
+solve()
